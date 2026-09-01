@@ -1,6 +1,6 @@
 # pbi-model-auditor
 
-[![tests](https://github.com/jibrankazi/pbi-model-auditor/actions/workflows/tests.yml/badge.svg)](https://github.com/jibrankazi/pbi-model-auditor/actions/workflows/tests.yml)
+[![tests](https://github.com/jibrankazi/pbi-model-auditor-Public/actions/workflows/tests.yml/badge.svg)](https://github.com/jibrankazi/pbi-model-auditor-Public/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![runtime dependencies](https://img.shields.io/badge/runtime%20dependencies-none-lightgrey)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -79,8 +79,8 @@ Orphan detection is reachability, not a text search. A measure used only by anot
 ## Quickstart
 
 ```bash
-git clone https://github.com/jibrankazi/pbi-model-auditor.git
-cd pbi-model-auditor
+git clone https://github.com/jibrankazi/pbi-model-auditor-Public.git
+cd pbi-model-auditor-Public
 
 python samples/build_sample.py                             # write the sample models
 python audit.py --file samples/broken_sales_model.pbit     # audit one file
@@ -150,7 +150,7 @@ pbi-audit
 ├── checks.py — cross-check both directions, then reachability over the DAX dependency graph
 │   └── health score = 100 - 7 per error - 2 per warning, floored at 0
 ├── drift.py — catalog-to-catalog diff between two versions of a file
-└── tests/ — 44 tests, including end-to-end runs over a generated broken model
+└── tests/ — 46 tests, including end-to-end runs over a generated broken model
 ```
 
 ## Scope and limitations
