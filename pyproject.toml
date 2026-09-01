@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pbi-model-auditor"
+version = "0.1.0"
+description = "Static analysis for Power BI template (.pbit) files: broken bindings, orphaned objects, schema drift."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Jibran Kazi" }]
+keywords = ["power-bi", "pbit", "static-analysis", "data-governance", "bi"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+pbi-audit = "pbi_auditor.cli:main"
+
+[tool.setuptools]
+packages = ["pbi_auditor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

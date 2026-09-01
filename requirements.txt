@@ -1,0 +1,3 @@
+# pbi-audit has no runtime dependencies: zipfile, json and re cover the whole
+# job. This file exists so the test suite is one command away.
+pytest>=8.0
