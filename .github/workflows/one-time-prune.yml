@@ -14,6 +14,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          python - <<'PY'
           import json, os, urllib.parse, urllib.request
           repo = os.environ["GITHUB_REPOSITORY"]
           base = f"https://api.github.com/repos/{repo}"
@@ -54,3 +55,5 @@ jobs:
           print(json.dumps({"repo":repo,"deleted":removed,"blocked":blocked},indent=2))
           if blocked:
               raise RuntimeError("Some branches still contain unique unmerged work; no deletion attempted for those branches")
+
+          PY
