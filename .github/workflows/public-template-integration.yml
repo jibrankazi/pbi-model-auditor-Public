@@ -1,0 +1,20 @@
+name: Authentic Microsoft Power BI template integration
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  real-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Download and audit genuine publicly hosted Power BI template
+        run: python scripts/audit_public_template.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-pbit-parsing-results
+          path: results/microsoft_pbit_real_file_audit.json

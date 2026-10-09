@@ -1,3 +1,21 @@
+## Verified public Microsoft .pbit audit — October 9, 2026
+
+[Successful GitHub Actions real-template run](https://github.com/jibrankazi/pbi-model-auditor-Public/actions/runs/37935480581) downloaded Microsoft's original COVID-19 US Tracking Sample.pbit file (1,276,277 bytes) and ran the production CLI.
+
+| Static model inventory / findings | Measured |
+|---|---:|
+| Tables | 6 |
+| Columns | 16 |
+| Measures | 10 |
+| Report pages | 2 |
+| Visuals | 67 |
+| Structural errors | 0 |
+| Warnings | 5 |
+| Auditor health score | 90/100 |
+
+**Conclusion:** the CLI correctly read and analyzed a real externally published Power BI template, not a locally generated test package. Warnings are retained in the output artifact. **No live Power BI refresh, business data, Microsoft tenant connection or actual rendered-visual correctness was checked.**
+
+---
 # pbi-model-auditor
 
 [![tests](https://github.com/jibrankazi/pbi-model-auditor-Public/actions/workflows/tests.yml/badge.svg)](https://github.com/jibrankazi/pbi-model-auditor-Public/actions/workflows/tests.yml)
