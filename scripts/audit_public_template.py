@@ -38,7 +38,7 @@ def audit(output="results/microsoft_pbit_real_file_audit.json"):
     }
     dest=Path(output);dest.parent.mkdir(parents=True,exist_ok=True)
     dest.write_text(json.dumps(summary,indent=2)+"\n")
-    print(json.dumps({"source":SOURCE,"file_bytes":len(res.content),"auditor_exit":proc.returncode,"findings_keys":list(payload)},indent=2))
+    print(json.dumps({"source":SOURCE,"file_bytes":len(res.content),"auditor_exit":proc.returncode,"findings_keys":list(payload),"summary":payload.get("summary"),"findings_count":len(payload.get("findings",[]))},indent=2))
     return summary
 
 def main():
