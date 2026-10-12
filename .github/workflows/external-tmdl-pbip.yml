@@ -1,0 +1,43 @@
+name: External authentic TMDL and PBIR project audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pbi_auditor/tmdl.py"
+      - "pbi_auditor/reader.py"
+      - "scripts/audit_external_pbip.py"
+      - ".github/workflows/external-tmdl-pbip.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-third-party-pbip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install auditor test dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Checkout genuine externally authored TMDL and PBIR files
+        uses: actions/checkout@v4
+        with:
+          repository: ens-bilgi/ens-pbi
+          ref: main
+          path: third-party-source
+          persist-credentials: false
+      - name: Run real TMDL semantic model and PBIR source inspection
+        run: |
+          python scripts/audit_external_pbip.py \
+            --source third-party-source/projects \
+            --output results/real_external_tmdl_pbip_evidence.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: external-authentic-TMDL-PBIR-source-audit
+          path: results/real_external_tmdl_pbip_evidence.json
+          if-no-files-found: error
