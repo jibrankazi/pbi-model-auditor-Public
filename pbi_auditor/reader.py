@@ -79,28 +79,34 @@ def _bounded_json(raw: bytes, label: str) -> Any:
 
 
 def _read_project(path: Path) -> Package:
-    """Support source project with one TMSL model.bim and one PBIR JSON report.
-
-    TMDL-only models explicitly fail; no false 'clean' reports are created.
-    """
+    """Read either one TMSL or one recognized TMDL model and PBIR report."""
     root = path.parent if path.suffix.lower() == ".pbip" else path
     if path.is_file():
         pointer = _bounded_json(path.read_bytes(), str(path))
         if not isinstance(pointer, dict):
             raise PackageError("PBIP pointer must contain a JSON object")
     models = sorted(root.glob("*.SemanticModel/model.bim"))
+    tmdl_models = sorted(model.parent.parent for model in
+                         root.glob("*.SemanticModel/definition/tables/*.tmdl"))
+    tmdl_models = sorted(set(tmdl_models))
     reports = sorted(root.glob("*.Report/definition"))
-    if len(models) != 1:
-        if list(root.glob("*.SemanticModel/definition/tables/*.tmdl")):
-            raise PackageError("TMDL-only .pbip models are not supported; export a .pbit with DataModelSchema")
-        raise PackageError("Expected exactly one TMSL *.SemanticModel/model.bim in the .pbip project")
+    if len(models) + len(tmdl_models) != 1:
+        raise PackageError("Expected exactly one semantic model in TMSL or TMDL format")
     if len(reports) != 1:
         raise PackageError("Expected exactly one *.Report/definition folder in the .pbip project")
-    if models[0].is_symlink() or reports[0].is_symlink():
+    if (models[0] if models else tmdl_models[0]).is_symlink() or reports[0].is_symlink():
         raise PackageError("Symlinked PBIP model/report paths are refused")
-    pkg = Package(path=path, model_schema=_bounded_json(models[0].read_bytes(), str(models[0])))
+    if models:
+        schema = _bounded_json(models[0].read_bytes(), str(models[0]))
+    else:
+        from .tmdl import UnsupportedTMDL, parse_definition
+        try:
+            schema = parse_definition(tmdl_models[0])
+        except (UnsupportedTMDL, UnicodeError, OSError) as exc:
+            raise PackageError(f"TMDL model cannot be audited safely: {exc}") from exc
+    pkg = Package(path=path, model_schema=schema)
     if not isinstance(pkg.model_schema, dict) or not isinstance(pkg.model_schema.get("model"), dict):
-        raise PackageError("PBIP model.bim does not contain a TMSL model")
+        raise PackageError("PBIP semantic model did not yield a valid catalog")
     parts = list(reports[0].rglob("*.json"))
     if len(parts) > MAX_PACKAGE_PARTS:
         raise PackageError("PBIP report contains too many JSON parts")
