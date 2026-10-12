@@ -22,6 +22,8 @@ MODEL_PART = "datamodelschema"
 LAYOUT_PART = "report/layout"
 PBIR_PREFIX = "report/definition/"
 DATAMODEL_BINARY = "datamodel"
+MAX_JSON_PART_BYTES = 64 * 1024 * 1024
+MAX_PACKAGE_PARTS = 10000
 
 
 class PackageError(Exception):
@@ -66,10 +68,62 @@ class Package:
         return "none"
 
 
+
+def _bounded_json(raw: bytes, label: str) -> Any:
+    if len(raw) > MAX_JSON_PART_BYTES:
+        raise PackageError(f"{label} exceeds the per-part size limit")
+    try:
+        return _loads(raw, label)
+    except (UnicodeError, ValueError) as exc:
+        raise PackageError(f"{label} could not be decoded as JSON: {exc}") from exc
+
+
+def _read_project(path: Path) -> Package:
+    """Support source project with one TMSL model.bim and one PBIR JSON report.
+
+    TMDL-only models explicitly fail; no false 'clean' reports are created.
+    """
+    root = path.parent if path.suffix.lower() == ".pbip" else path
+    if path.is_file():
+        pointer = _bounded_json(path.read_bytes(), str(path))
+        if not isinstance(pointer, dict):
+            raise PackageError("PBIP pointer must contain a JSON object")
+    models = sorted(root.glob("*.SemanticModel/model.bim"))
+    reports = sorted(root.glob("*.Report/definition"))
+    if len(models) != 1:
+        if list(root.glob("*.SemanticModel/definition/tables/*.tmdl")):
+            raise PackageError("TMDL-only .pbip models are not supported; export a .pbit with DataModelSchema")
+        raise PackageError("Expected exactly one TMSL *.SemanticModel/model.bim in the .pbip project")
+    if len(reports) != 1:
+        raise PackageError("Expected exactly one *.Report/definition folder in the .pbip project")
+    if models[0].is_symlink() or reports[0].is_symlink():
+        raise PackageError("Symlinked PBIP model/report paths are refused")
+    pkg = Package(path=path, model_schema=_bounded_json(models[0].read_bytes(), str(models[0])))
+    if not isinstance(pkg.model_schema, dict) or not isinstance(pkg.model_schema.get("model"), dict):
+        raise PackageError("PBIP model.bim does not contain a TMSL model")
+    parts = list(reports[0].rglob("*.json"))
+    if len(parts) > MAX_PACKAGE_PARTS:
+        raise PackageError("PBIP report contains too many JSON parts")
+    for part in parts:
+        if part.is_symlink():
+            raise PackageError("Symlinked PBIP report definitions are refused")
+        relative = part.relative_to(reports[0]).as_posix()
+        name = f"Report/definition/{relative}"
+        if part.stat().st_size > MAX_JSON_PART_BYTES:
+            raise PackageError(f"{name} exceeds the per-part size limit")
+        pkg.pbir_parts[name] = _bounded_json(part.read_bytes(), name)
+        pkg.part_names.append(name)
+    if not pkg.pbir_parts:
+        raise PackageError("No PBIR report definition JSON found")
+    return pkg
+
+
 def read_package(path: str | Path) -> Package:
     path = Path(path)
     if not path.exists():
         raise PackageError(f"File not found: {path}")
+    if path.is_dir() or path.suffix.lower() == ".pbip":
+        return _read_project(path)
     if not zipfile.is_zipfile(path):
         raise PackageError(
             f"{path.name} is not a ZIP container. "
@@ -78,15 +132,29 @@ def read_package(path: str | Path) -> Package:
 
     pkg = Package(path=path)
     with zipfile.ZipFile(path) as zf:
-        pkg.part_names = zf.namelist()
-        for name in pkg.part_names:
-            key = name.replace("\\", "/").lstrip("/").lower()
-            if key == MODEL_PART:
-                pkg.model_schema = _loads(zf.read(name), name)
-            elif key == LAYOUT_PART:
-                pkg.layout = _loads(zf.read(name), name)
-            elif key.startswith(PBIR_PREFIX) and key.endswith(".json"):
-                pkg.pbir_parts[name] = _loads(zf.read(name), name)
+        infos = zf.infolist()
+        if len(infos) > MAX_PACKAGE_PARTS:
+            raise PackageError("Power BI ZIP contains too many parts")
+        keys = set()
+        pkg.part_names = [info.filename for info in infos]
+        for info in infos:
+            name = info.filename
+            key = name.replace(chr(92), "/").lstrip("/").lower()
+            if key in keys:
+                raise PackageError(f"Duplicate canonical ZIP entry: {key}")
+            keys.add(key)
+            if key in (MODEL_PART, LAYOUT_PART) or (
+                key.startswith(PBIR_PREFIX) and key.endswith(".json")
+            ):
+                if info.file_size > MAX_JSON_PART_BYTES:
+                    raise PackageError(f"{name} exceeds the per-part size limit")
+                parsed = _bounded_json(zf.read(info), name)
+                if key == MODEL_PART:
+                    pkg.model_schema = parsed
+                elif key == LAYOUT_PART:
+                    pkg.layout = parsed
+                else:
+                    pkg.pbir_parts[name] = parsed
 
     if pkg.model_schema is None:
         lower = {n.lower() for n in pkg.part_names}

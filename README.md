@@ -192,3 +192,19 @@ tests/                    pytest suite
 ## License
 
 MIT
+
+## Limited PBIP source project support (TMSL + PBIR)
+
+The auditor now reads .pbip pointer files or project folders containing exactly one
+*.SemanticModel/model.bim JSON model and one *.Report/definition PBIR JSON report.
+The usual binding, relationship, DAX, and report checks apply without packaging
+the project as a .pbit. Usage: python audit.py --file path/to/Sales.pbip --json.
+
+TMDL-only projects are **not supported** and are explicitly rejected, rather
+than being silently reported clean. The project-directory path is covered by
+synthetic software fixtures; no external genuine PBIP report has yet been
+validated. The separately verified Microsoft sample is a real .pbit.
+
+The ZIP reader now rejects duplicate canonical entry names and oversized
+required JSON parts. No data refresh, live Power BI tenant, rendered visuals,
+or binary .pbix DataModel inspection is claimed.

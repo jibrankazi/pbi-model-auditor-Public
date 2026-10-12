@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="pbi-audit",
         description="Detect broken field bindings, orphaned objects and schema drift in .pbit files.",
     )
-    parser.add_argument("--file", "-f", required=True, help="path to the .pbit file to audit")
+    parser.add_argument("--file", "-f", required=True, help="path to .pbit or supported TMSL .pbip project to audit")
     parser.add_argument(
         "--baseline",
         "-b",
