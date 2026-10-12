@@ -40,14 +40,47 @@ def test_tmsl_pbip_project_folder_and_pointer(tmp_path):
         assert not result.errors
 
 
-def test_tmdl_is_refused_instead_of_falsely_clean(tmp_path):
+def test_tmdl_project_reads_real_tmdl_syntax_and_audits_pbir(tmp_path):
     root = create_pbip(tmp_path / "Project")
     (root / "Sales.SemanticModel/model.bim").unlink()
-    table = root / "Sales.SemanticModel/definition/tables"
+    definition = root / "Sales.SemanticModel/definition"
+    table = definition / "tables"
     table.mkdir(parents=True)
-    (table / "Sales.tmdl").write_text("table Sales")
-    with pytest.raises(PackageError, match="TMDL-only"):
-        read_package(root / "Sales.pbip")
+    (table / "Sales.tmdl").write_text(
+        "table Sales\n"
+        "\tcolumn Amount\n"
+        "\t\tdataType: double\n"
+        "\tmeasure 'Total Revenue' = SUM('Sales'[Amount])\n"
+        "\t\tformatString: $ #,##0\n", encoding="utf-8")
+    package = read_package(root / "Sales.pbip")
+    assert package.model_schema["model"]["tables"][0]["measures"][0]["name"] == "Total Revenue"
+    result = audit_file(root)
+    assert result.pages == 1
+    assert result.visuals == 1
+    assert not result.errors
+
+
+def test_tmdl_relationship_sort_by_and_unsupported_group_fail_closed(tmp_path):
+    root = create_pbip(tmp_path / "Project")
+    (root / "Sales.SemanticModel/model.bim").unlink()
+    definition = root / "Sales.SemanticModel/definition"
+    table = definition / "tables"
+    table.mkdir(parents=True)
+    (table / "Sales.tmdl").write_text(
+        "table Sales\n\tcolumn Amount\n\t\tdataType: double\n"
+        "\tcolumn Key\n\t\tdataType: int64\n"
+        "\tmeasure 'Total Revenue' = SUM('Sales'[Amount])\n", encoding="utf-8")
+    (table / "Customers.tmdl").write_text(
+        "table Customers\n\tcolumn Key\n\t\tdataType: int64\n", encoding="utf-8")
+    (definition / "relationships.tmdl").write_text(
+        "relationship 50abc\n\tfromColumn: Sales.Key\n\ttoColumn: Customers.Key\n")
+    package = read_package(root / "Sales.pbip")
+    assert package.model_schema["model"]["relationships"][0]["toTable"] == "Customers"
+    assert not audit_file(root).errors
+    (table / "Sales.tmdl").write_text(
+        "table Sales\n\tcalculationGroup\n\t\tcalculationItem 'YTD' = 1\n")
+    with pytest.raises(PackageError, match="cannot be audited safely"):
+        read_package(root)
 
 
 def test_ambiguous_semantic_models_are_rejected(tmp_path):
