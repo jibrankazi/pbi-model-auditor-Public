@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ens-bilgi/ens-pbi
-          ref: main
+          ref: 100172fdb0d1f08674c593060e40a2ee6f73f3ba
           path: third-party-source
           persist-credentials: false
       - name: Run real TMDL semantic model and PBIR source inspection
