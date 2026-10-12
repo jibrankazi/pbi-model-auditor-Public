@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
       - name: Run real TMDL semantic model and PBIR source inspection
         run: |
-          python scripts/audit_external_pbip.py \
+          PYTHONPATH=. python scripts/audit_external_pbip.py \
             --source third-party-source/projects \
             --output results/real_external_tmdl_pbip_evidence.json
       - uses: actions/upload-artifact@v4
